@@ -8,6 +8,11 @@
 
 #define MAX_CAPACITY 512 //4kb state, 512 * 8byte(struct item entry size)
 
+/*
+	State item, we will track each missed request's address difference compared
+	with previous request, we will also track the previous request that share the
+	same address difference to make later prefetch candidate searching faster
+*/
 struct item
 {
 	int delta;
@@ -25,8 +30,12 @@ class Prefetcher {
 	bool _ready;
 	Request _nextReq;
 
-	/* a 512-entry table, maintain global delta history information */
-	struct item *_items;
+	/*
+		a 512-entry table, maintain global delta history information,
+		each entry is 8 bytes big, so altogher, we utilized the entire 4kb state
+	*/
+	struct item _ghb_table[MAX_CAPACITY];
+	bool _queue_full;
 	int _end_of_queue;
 	int _prev_addr;
 	int _next_delta;
@@ -51,11 +60,13 @@ class Prefetcher {
 	 */
 	void cpuRequest(Request req);
 
+	//Helper functions
+
 	/* Find the previous entry of the same delta */
-	int find_prev(int delta);
+	int locatePrevEntry(int delta);
 
 	/* Find the next candidate entry to prefetch */
-	int find_next_req(int delta);
+	int locateCandidate(int delta);
 };
 
 #endif
